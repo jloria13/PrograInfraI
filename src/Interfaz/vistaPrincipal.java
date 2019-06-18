@@ -7,7 +7,11 @@ package Interfaz;
 
 import Logic.Dispatcher;
 import Logic.Process;
+import Logic.Temporizer;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -30,26 +34,32 @@ public class vistaPrincipal extends javax.swing.JFrame {
         dispatcher = new Dispatcher();
         initComponents();
         tableModel = (DefaultTableModel) jTableProcesses.getModel();
-
+        //waitMethod();
     }
     
     private void addTableProcess(Process process) {
         tableModel.addRow(new Object[] {process.getID(),process.getType(),process.getState()});
     }
     
-    private void refreshTable(){
-        
-    }
-    
-    private synchronized void waitMethod(){
-        while (true){
-            refreshTable();
-            try {
-                this.wait(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+    public void refreshTable(){
+        tableModel.setRowCount(0);
+        dispatcher.seeReady();
+        dispatcher.seeBlocked();
+        for (Process process:processes){
+            if (!process.getType().equals("Finished")){
+                addTableProcess(process);
+            }else{
+                processes.remove(process);
             }
         }
+    }
+    
+    private void waitMethod(){
+        new Thread (()-> {
+            while (true){
+                refreshTable();
+            } 
+        }).start();
     }
 
     /**
@@ -111,10 +121,10 @@ public class vistaPrincipal extends javax.swing.JFrame {
                         .addComponent(jLabel1))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(109, 109, 109)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jButtonProcessB)
-                            .addComponent(jButtonProcessA)
-                            .addComponent(jButtonProcessC))))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jButtonProcessB, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jButtonProcessA, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jButtonProcessC, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -176,6 +186,7 @@ public class vistaPrincipal extends javax.swing.JFrame {
         );
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButtonProcessBActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonProcessBActionPerformed
@@ -202,7 +213,7 @@ public class vistaPrincipal extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
+    public static void main(String args[]) throws InterruptedException {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
@@ -229,7 +240,11 @@ public class vistaPrincipal extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new vistaPrincipal().setVisible(true);
+                vistaPrincipal ventanaPrincipal = new vistaPrincipal();
+                ventanaPrincipal.setVisible(true);
+                Timer time = new Timer();
+                Temporizer tempo = new Temporizer(ventanaPrincipal);
+                time.schedule(tempo,0,1000);
             }
         });
     }

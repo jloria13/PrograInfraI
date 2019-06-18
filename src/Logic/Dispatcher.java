@@ -44,13 +44,12 @@ public class Dispatcher {
         if (calcultion <= 40) {//reparar
 
             if (running.size() <= 2) {
-                
-                /*
-                if (process.getType().equals("B")) {
-                    semWait(process);
-                    semSignal(process);
-                }*/
 
+                /*
+				if(process.getType().equals("B")) {
+					semWait(process);
+					semSignal(process);		
+				}*/
                 running.add(process);
                 addMemory(process.getMemoryUse());
                 process.setState("Running");
@@ -76,13 +75,18 @@ public class Dispatcher {
         int index = 0;
 
         freeMemory(running.get(index).getMemoryUse());
+        running.get(index).setState("Finished");
         running.remove(index);
 
+    }
+
+    public void seeReady() {
         //
+
         if (readyQueue.isEmpty() == false) {
             int cont = 0;
 
-            while (readyQueue.size() != cont & running.size() < 3) {
+            while (readyQueue.size() != cont & running.size() <= 2) {
 
                 Process process = readyQueue.get(cont);
                 int calcultion = this.memoryCalcultion(process.getMemoryUse());
@@ -92,7 +96,9 @@ public class Dispatcher {
                     addMemory(process.getMemoryUse());
                     process.setState("Running");
                     readyQueue.remove(cont);
-                    runProcess();
+                    new Thread(() -> {
+                        runProcess();
+                    }).start();
                     break;
                 } else {
                     blockedQueue.add(process);
@@ -104,31 +110,34 @@ public class Dispatcher {
 
             }
 
-        } else {
+        }
+    }
 
-            if (blockedQueue.isEmpty() == false) {
-                int cont = 0;
+    public void seeBlocked() {
 
-                while (blockedQueue.size() != cont & running.size() < 3) {
+        if (blockedQueue.isEmpty() == false) {
+            int cont = 0;
 
-                    Process process = blockedQueue.get(cont);
-                    int calcultion = this.memoryCalcultion(process.getMemoryUse());
+            while (blockedQueue.size() != cont & running.size() <= 2) {
 
-                    if (calcultion <= 40) {
-                        running.add(process);
-                        addMemory(process.getMemoryUse());
-                        process.setState("Running");
-                        blockedQueue.remove(cont);
+                Process process = blockedQueue.get(cont);
+                int calcultion = this.memoryCalcultion(process.getMemoryUse());
+
+                if (calcultion <= 40) {
+                    running.add(process);
+                    addMemory(process.getMemoryUse());
+                    process.setState("Running");
+                    blockedQueue.remove(cont);
+                    new Thread(() -> {
                         runProcess();
-                        break;
-                    } else {
-                        cont++;
-                    }
-
+                    }).start();
+                    break;
+                } else {
+                    cont++;
                 }
+
             }
         }
-
     }
 
     //Se hace el calculo si la cola de la memoria esta llena o no
