@@ -20,9 +20,9 @@ public class Dispatcher {
         this.memory = 0;
         this.running = new ArrayList<Process>(3);
         this.readyQueue = new ArrayList<Process>();
-        //this.readySuspendedQueue = new ArrayList<Process>(); 
+        //this.readySuspendedQueue = new ArrayList<Process>();
         this.blockedQueue = new ArrayList<Process>();
-        //this.blockedSuspendedQueue = new ArrayList<Process>(); 
+        //this.blockedSuspendedQueue = new ArrayList<Process>();
         this.recurso1 = new Recurso();
         this.recurso2 = new Recurso();
 
@@ -30,7 +30,7 @@ public class Dispatcher {
 
     public void runProcess() {
         Process process = running.get(0);
-        process.run();
+        runProcess();
         freeProcess();
     }
 
@@ -48,7 +48,7 @@ public class Dispatcher {
                 /*
 				if(process.getType().equals("B")) {
 					semWait(process);
-					semSignal(process);		
+					semSignal(process);
 				}*/
                 running.add(process);
                 addMemory(process.getMemoryUse());
@@ -73,6 +73,16 @@ public class Dispatcher {
 
         //Hacer metodo LRU
         int index = 0;
+
+        if (running.get(0).getType().equals("C") & running.size() > 0) {
+            index = 1;
+        }
+
+        if (running.size() >  2) {
+            if ((running.get(1).getType().equals("C"))) {
+                index = 2;
+            }
+        }
 
         freeMemory(running.get(index).getMemoryUse());
         running.get(index).setState("Finished");
@@ -161,20 +171,20 @@ public class Dispatcher {
 
     }
 
-    //Metodo auxilar para saber cuanto espacio ocupado tiene la memoria 
+    //Metodo auxilar para saber cuanto espacio ocupado tiene la memoria
     /*private int addPriority(){
 		int temp = 0;
 		switch(running.size()) {
 		  case 0:
-		    
+
 			  temp = 1;
-		    
+
 		  case 1:
-			  
+
 			  temp = 2;
-			  
+
 		  case 2:
-			  
+
 			  temp = 3;
 		}
 		return temp;
