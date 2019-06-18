@@ -58,6 +58,16 @@ public abstract class Process extends TimerTask {
 	public void setProcessTime(int processTime) {
 		this.processTime = processTime;
 	}
+
+        public int getCounter() {
+            return counter;
+        }
+
+        public void setCounter(int counter) {
+            this.counter = counter;
+        }
+
+
 	
 	
 	

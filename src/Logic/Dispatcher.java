@@ -20,18 +20,17 @@ public class Dispatcher {
         this.memory = 0;
         this.running = new ArrayList<Process>(3);
         this.readyQueue = new ArrayList<Process>();
-        //this.readySuspendedQueue = new ArrayList<Process>();
+        //this.readySuspendedQueue = new ArrayList<Process>(); 
         this.blockedQueue = new ArrayList<Process>();
-        //this.blockedSuspendedQueue = new ArrayList<Process>();
+        //this.blockedSuspendedQueue = new ArrayList<Process>(); 
         this.recurso1 = new Recurso();
         this.recurso2 = new Recurso();
 
     }
 
-    public void runProcess() {
-        Process process = running.get(0);
-        runProcess();
-        freeProcess();
+    public void runProcess(Process process) {
+        process.run();
+        freeProcess(process);
     }
 
     //Creates a new process, if the memory queque is full the process goes to the blockedQueue, else if the running queque is full the process
@@ -48,13 +47,14 @@ public class Dispatcher {
                 /*
 				if(process.getType().equals("B")) {
 					semWait(process);
-					semSignal(process);
+					semSignal(process);		
 				}*/
                 running.add(process);
                 addMemory(process.getMemoryUse());
                 process.setState("Running");
+                process.setCounter(running.size()-1);
                 new Thread(() -> {
-                    runProcess();
+                    runProcess(process);
                 }).start();
             } else {
                 readyQueue.add(process);
@@ -69,25 +69,28 @@ public class Dispatcher {
         return process;
     }
 
-    public void freeProcess() {
-
-        //Hacer metodo LRU
-        int index = 0;
-
-        if (running.get(0).getType().equals("C") & running.size() > 0) {
-            index = 1;
-        }
-
-        if (running.size() >  2) {
-            if ((running.get(1).getType().equals("C"))) {
-                index = 2;
+    public void freeProcess(Process process) {
+        for (int i=0;i<running.size();i++){
+            Process procs = running.get(i);
+            if (procs.getID() == process.getID()){
+                running.remove(i);
             }
         }
+        //Hacer metodo LRU
 
-        freeMemory(running.get(index).getMemoryUse());
-        running.get(index).setState("Finished");
-        running.remove(index);
-
+        /*
+		if(running.get(0).getType().equals("C")){
+			index = 1;
+		}
+		
+		if(running.size() > 1){
+			if((running.get(1).getType().equals("C"))){
+				index = 2;
+			}
+		}
+         */
+        freeMemory(process.getMemoryUse());
+        process.setState("Finished");
     }
 
     public void seeReady() {
@@ -107,7 +110,7 @@ public class Dispatcher {
                     process.setState("Running");
                     readyQueue.remove(cont);
                     new Thread(() -> {
-                        runProcess();
+                        runProcess(process);
                     }).start();
                     break;
                 } else {
@@ -139,7 +142,7 @@ public class Dispatcher {
                     process.setState("Running");
                     blockedQueue.remove(cont);
                     new Thread(() -> {
-                        runProcess();
+                        runProcess(process);
                     }).start();
                     break;
                 } else {
@@ -171,37 +174,37 @@ public class Dispatcher {
 
     }
 
-    //Metodo auxilar para saber cuanto espacio ocupado tiene la memoria
+    //Metodo auxilar para saber cuanto espacio ocupado tiene la memoria 
     /*private int addPriority(){
 		int temp = 0;
 		switch(running.size()) {
 		  case 0:
-
+		    
 			  temp = 1;
-
+		    
 		  case 1:
-
+			  
 			  temp = 2;
-
+			  
 		  case 2:
-
+			  
 			  temp = 3;
 		}
 		return temp;
 	}*/
     //semaforo
-    void semWait(Process p) {
+    void semWait(Process process) {
         semCount--;
         if (semCount < 0) {
             /*place this process in s.queue */
-            semQueue.add(p);
+            semQueue.add(process);
             /*block this process */
         }
-        running.add(p);
-        addMemory(p.memoryUse);
-        p.setState("Running");
+        running.add(process);
+        addMemory(process.memoryUse);
+        process.setState("Running");
         new Thread(() -> {
-            runProcess();
+            runProcess(process);
         }).start();
         //se ejecuta el proceso/
 
