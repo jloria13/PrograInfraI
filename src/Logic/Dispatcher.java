@@ -9,9 +9,9 @@ public class Dispatcher {
     private ArrayList<Process> running;
     private ArrayList<Process> readyQueue;
     private ArrayList<Process> blockedQueue;
-    private Recurso recurso1;
-    private Recurso recurso2;
-    int semCount;
+    //private Recurso recurso1;
+    //private Recurso recurso2;
+    int semCount = 2;
     ArrayList<Process> semQueue;
     static Timer timer;
 
@@ -20,16 +20,21 @@ public class Dispatcher {
         this.memory = 0;
         this.running = new ArrayList<Process>(3);
         this.readyQueue = new ArrayList<Process>();
-        //this.readySuspendedQueue = new ArrayList<Process>(); 
         this.blockedQueue = new ArrayList<Process>();
-        //this.blockedSuspendedQueue = new ArrayList<Process>(); 
-        this.recurso1 = new Recurso();
-        this.recurso2 = new Recurso();
+        this.semQueue = new ArrayList<Process>();
+        //this.recurso1 = new Recurso();
+        //this.recurso2 = new Recurso();
 
     }
 
     public void runProcess(Process process) {
         process.run();
+        freeProcess(process);
+    }
+
+    public void runProcessSem(Process process) {
+        process.run();
+        semSignal();
         freeProcess(process);
     }
 
@@ -43,26 +48,27 @@ public class Dispatcher {
         if (calcultion <= 40) {//reparar
 
             if (running.size() <= 2) {
-
-                /*
-				if(process.getType().equals("B")) {
-					semWait(process);
-					semSignal(process);		
-				}*/
-                running.add(process);
-                addMemory(process.getMemoryUse());
-                process.setState("Running");
-                process.setCounter(running.size()-1);
-                new Thread(() -> {
-                    runProcess(process);
-                }).start();
+                if (process.getType().equals("B")) {
+                    semWait(process);
+                } else {
+                    running.add(process);
+                    addMemory(process.getMemoryUse());
+                    process.setState("Running");
+                    new Thread(() -> {
+                        runProcess(process);
+                    }).start();
+                }
             } else {
-                readyQueue.add(process);
-                process.setState("Ready");
+                if (process.getType().equals("B")) {
+                    System.out.println("Entre");
+                    semWait(process);
+                } else {
+                    readyQueue.add(process);
+                    process.setState("Ready");
+                }
             }
 
         } else {
-
             blockedQueue.add(process);
             process.setState("Blocked");
         }
@@ -70,32 +76,19 @@ public class Dispatcher {
     }
 
     public void freeProcess(Process process) {
-        for (int i=0;i<running.size();i++){
+        for (int i = 0; i < running.size(); i++) {
             Process procs = running.get(i);
-            if (procs.getID() == process.getID()){
+            if (procs.getID() == process.getID()) {
                 running.remove(i);
             }
         }
         //Hacer metodo LRU
 
-        /*
-		if(running.get(0).getType().equals("C")){
-			index = 1;
-		}
-		
-		if(running.size() > 1){
-			if((running.get(1).getType().equals("C"))){
-				index = 2;
-			}
-		}
-         */
         freeMemory(process.getMemoryUse());
         process.setState("Finished");
     }
 
     public void seeReady() {
-        //
-
         if (readyQueue.isEmpty() == false) {
             int cont = 0;
 
@@ -109,30 +102,30 @@ public class Dispatcher {
                     addMemory(process.getMemoryUse());
                     process.setState("Running");
                     readyQueue.remove(cont);
-                    new Thread(() -> {
-                        runProcess(process);
-                    }).start();
+                    if (process.getType().equals("B")) {
+                        new Thread(() -> {
+                            runProcessSem(process);
+                        }).start();
+                    } else {
+                        new Thread(() -> {
+                            runProcess(process);
+                        }).start();
+                    }
                     break;
                 } else {
                     blockedQueue.add(process);
                     process.setState("Blocked");
                     readyQueue.remove(cont);
                 }
-
                 cont++;
-
             }
-
         }
     }
 
     public void seeBlocked() {
-
         if (blockedQueue.isEmpty() == false) {
             int cont = 0;
-
             while (blockedQueue.size() != cont & running.size() <= 2) {
-
                 Process process = blockedQueue.get(cont);
                 int calcultion = this.memoryCalcultion(process.getMemoryUse());
 
@@ -141,14 +134,19 @@ public class Dispatcher {
                     addMemory(process.getMemoryUse());
                     process.setState("Running");
                     blockedQueue.remove(cont);
-                    new Thread(() -> {
-                        runProcess(process);
+                    if (process.getType().equals("B")){
+                        new Thread(() -> {
+                        runProcessSem(process);
                     }).start();
+                    }else{
+                        new Thread(() -> {
+                            runProcess(process);
+                        }).start();
+                    }
                     break;
                 } else {
                     cont++;
                 }
-
             }
         }
     }
@@ -163,66 +161,42 @@ public class Dispatcher {
     }
 
     private void addMemory(int processSize) {
-
         memory = memory + processSize;
-
     }
 
     private void freeMemory(int processSize) {
-
         memory = memory - processSize;
-
     }
 
-    //Metodo auxilar para saber cuanto espacio ocupado tiene la memoria 
-    /*private int addPriority(){
-		int temp = 0;
-		switch(running.size()) {
-		  case 0:
-		    
-			  temp = 1;
-		    
-		  case 1:
-			  
-			  temp = 2;
-			  
-		  case 2:
-			  
-			  temp = 3;
-		}
-		return temp;
-	}*/
-    //semaforo
     void semWait(Process process) {
         semCount--;
         if (semCount < 0) {
             /*place this process in s.queue */
+            process.setState("Blocked");
             semQueue.add(process);
             /*block this process */
+        }else{
+            running.add(process);
+            addMemory(process.memoryUse);
+            process.setState("Running");
+            new Thread(() -> {
+                runProcessSem(process);
+            }).start();
         }
-        running.add(process);
-        addMemory(process.memoryUse);
-        process.setState("Running");
-        new Thread(() -> {
-            runProcess(process);
-        }).start();
         //se ejecuta el proceso/
 
     }
 
-    void semSignal(Process p) {
+    void semSignal() {
         semCount++;
         if (semCount <= 0) {
-            int index = semQueue.size() - 1;
-            readyQueue.add(semQueue.get(index));
-            semQueue.remove(index);
+            Process process = semQueue.get(0);
+            semQueue.remove(0);
+            process.setState("Ready");
+            readyQueue.add(process);
             /*remove a process P from semQueue */;
             /*place process P on ready list */;
         }
-    }
-
-    public static void main(String[] args) {
-
     }
 
 }
